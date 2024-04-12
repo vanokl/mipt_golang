@@ -9,7 +9,7 @@ import (
 	"github.com/vanokl/trxservice/services/transactions/repo"
 )
 
-func Item(db *sql.DB) http.HandlerFunc {
+func Transaction(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "POST":

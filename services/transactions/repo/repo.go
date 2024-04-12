@@ -20,18 +20,18 @@ func InitDB(config *configs.Config) (*sql.DB, error) {
 	}
 
 	createDB := `
-	CREATE TABLE users (
+	CREATE TABLE IF NOT EXISTS users  (
 		id SERIAL PRIMARY KEY,
 		name VARCHAR(255) NOT NULL,
 		email VARCHAR(255) UNIQUE NOT NULL,
 		password VARCHAR(255) NOT NULL 
 	);
 
-	INSERT INTO userts VALUES (1, 'Иван', 'test@mail.ru', 'dfasdhfdgasdf');
+	--INSERT INTO users VALUES (1, 'Иван', 'test@mail.ru', 'dfasdhfdgasdf');
 	
-	CREATE TYPE transaction_type AS ENUM ('income', 'expense', 'transfer');
+	--CREATE OR REPLACE TYPE  transaction_type  AS ENUM ('income', 'expense', 'transfer');
 		
-	CREATE TABLE transactions (
+	CREATE TABLE IF NOT EXISTS transactions   (
 		id SERIAL PRIMARY KEY,
 		user_id INTEGER NOT NULL REFERENCES users(id),
 		amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),

@@ -21,7 +21,7 @@ func main() {
 		panic(err)
 	}
 
-	http.HandleFunc("/item", handlers.Item(db))
+	http.HandleFunc("/transactions", handlers.Transaction(db))
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 
