@@ -22,6 +22,8 @@ func main() {
 	}
 
 	http.HandleFunc("/transactions", handlers.Transaction(db))
+	http.HandleFunc("/transactions/{id}", handlers.Transaction(db))
+	http.HandleFunc("/commissions/calculate", handlers.CommissionHandler())
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 

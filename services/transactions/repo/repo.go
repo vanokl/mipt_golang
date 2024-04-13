@@ -60,7 +60,7 @@ func InitDB(config *configs.Config) (*sql.DB, error) {
 
 func Create(transaction models.Transaction, db *sql.DB) error {
 
-	_, err := db.Exec("INSERT INTO transactions (id, user_id, amount, currency, type, category, date, description) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)", transaction.ID, transaction.Amount, transaction.Currency, transaction.Type, transaction.Category, transaction.Date, transaction.Description)
+	_, err := db.Exec("INSERT INTO transactions (id, user_id, amount, currency, type, category, date, description) VALUES (DEFAULT, $1, $2, $3, $4, $5, $6, $7)", transaction.UserID, transaction.Amount, transaction.Currency, transaction.Type, transaction.Category, transaction.Date, transaction.Description)
 	if err != nil {
 		fmt.Println("Exec INSERT")
 		return err
@@ -71,9 +71,62 @@ func Create(transaction models.Transaction, db *sql.DB) error {
 
 func Read(id string, db *sql.DB) *models.Transaction {
 	var result models.Transaction
-	db.QueryRow("SELECT * FROM transactions WHERE id = $1", id).Scan(&result)
+
+	row := db.QueryRow(`SELECT id, user_id, amount, currency, type, category, date, description FROM transactions WHERE id = $1`, id)
+	if err := row.Scan(&result.ID, &result.UserID, &result.Amount, &result.Currency, &result.Type, &result.Category, &result.Date, &result.Description); err != nil {
+		fmt.Println(err)
+		return nil
+	}
 
 	return &result
+}
+
+func Update(id string, transaction models.Transaction, db *sql.DB) error {
+
+	_, err := db.Exec(`UPDATE transactions 
+					   SET user_id=$2, amount=$3, currency=$4, type=$5, category=$6, date=$7, description=$8
+					   WHERE id=$1
+					  `, id, transaction.UserID, transaction.Amount, transaction.Currency, transaction.Type, transaction.Category, transaction.Date, transaction.Description)
+	if err != nil {
+		fmt.Println("Exec UPDATE")
+		return err
+	}
+
+	return nil
+}
+
+func Delete(id string, db *sql.DB) error {
+
+	_, err := db.Exec(`DELETE FROM transactions WHERE id=$1`, id)
+	if err != nil {
+		fmt.Println("Exec DELETE")
+		return err
+	}
+
+	return nil
+}
+
+func List(db *sql.DB) []models.Transaction {
+
+	rows, err := db.Query(`SELECT * FROM transactions`)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var results []models.Transaction
+
+	for rows.Next() {
+		var result models.Transaction
+		if err := rows.Scan(&result.ID, &result.UserID, &result.Amount, &result.Currency, &result.Type, &result.Category, &result.Date, &result.Description); err != nil {
+			fmt.Println(err)
+			return nil
+		}
+		fmt.Println(result.ID)
+		results = append(results, result)
+	}
+
+	return results
 }
 
 // Пример с использованием InMemoryDB

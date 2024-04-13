@@ -1,7 +1,5 @@
 package models
 
-import "time"
-
 type TransactionType string
 
 const (
@@ -12,11 +10,12 @@ const (
 
 type Transaction struct {
 	ID          string          `json:"id"`
+	UserID      string          `json:"userid"`
 	Amount      float64         `json:"amount"`
 	Currency    string          `json:"currency"`
 	Type        TransactionType `json:"type"`
 	Category    string          `json:"category"`
-	Date        time.Time       `json:"date"`
+	Date        string          `json:"date"`
 	Description string          `json:"description"`
 }
 
@@ -28,4 +27,14 @@ type TransactionResponse struct {
 type ListResponse struct {
 	Transaction []Transaction `json:"transaction"`
 	Ok          bool          `json:"ok"`
+}
+
+type Commission struct {
+	TransactionID   string          `json:"transaction_id"`
+	Amount          float64         `json:"amount"`
+	Currency        string          `json:"currency"`
+	Type            TransactionType `json:"type"`
+	Commission      float64         `json:"commission"`
+	CalculationDate string          `json:"calculation_date"`
+	Description     string          `json:"description"`
 }
