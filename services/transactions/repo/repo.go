@@ -4,10 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 
-	configs "github.com/vanokl/trxservice/config"
-	"github.com/vanokl/trxservice/services/transactions/models"
+	"log"
 
 	_ "github.com/lib/pq"
+	configs "github.com/vanokl/trxservice/config"
+	"github.com/vanokl/trxservice/services/transactions/models"
 )
 
 func InitDB(config *configs.Config) (*sql.DB, error) {
@@ -45,13 +46,13 @@ func InitDB(config *configs.Config) (*sql.DB, error) {
 
 	_, err = db.Exec(createDB)
 	if err != nil {
-		fmt.Println("Exec err")
+		log.Fatal("Exec err")
 		return nil, err
 	}
 
 	err = db.Ping()
 	if err != nil {
-		fmt.Println("Ping err")
+		log.Fatal("Ping err")
 		return nil, err
 	}
 
@@ -59,10 +60,10 @@ func InitDB(config *configs.Config) (*sql.DB, error) {
 }
 
 func Create(transaction models.Transaction, db *sql.DB) error {
-
+	log.Println("Exec INSERT")
 	_, err := db.Exec("INSERT INTO transactions (id, user_id, amount, currency, type, category, date, description) VALUES (DEFAULT, $1, $2, $3, $4, $5, $6, $7)", transaction.UserID, transaction.Amount, transaction.Currency, transaction.Type, transaction.Category, transaction.Date, transaction.Description)
 	if err != nil {
-		fmt.Println("Exec INSERT")
+		log.Fatal(err)
 		return err
 	}
 
@@ -71,10 +72,10 @@ func Create(transaction models.Transaction, db *sql.DB) error {
 
 func Read(id string, db *sql.DB) *models.Transaction {
 	var result models.Transaction
-
+	log.Println("Exec SELECT")
 	row := db.QueryRow(`SELECT id, user_id, amount, currency, type, category, date, description FROM transactions WHERE id = $1`, id)
 	if err := row.Scan(&result.ID, &result.UserID, &result.Amount, &result.Currency, &result.Type, &result.Category, &result.Date, &result.Description); err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 		return nil
 	}
 
@@ -82,13 +83,13 @@ func Read(id string, db *sql.DB) *models.Transaction {
 }
 
 func Update(id string, transaction models.Transaction, db *sql.DB) error {
-
+	log.Println("Exec UPDATE")
 	_, err := db.Exec(`UPDATE transactions 
 					   SET user_id=$2, amount=$3, currency=$4, type=$5, category=$6, date=$7, description=$8
 					   WHERE id=$1
 					  `, id, transaction.UserID, transaction.Amount, transaction.Currency, transaction.Type, transaction.Category, transaction.Date, transaction.Description)
 	if err != nil {
-		fmt.Println("Exec UPDATE")
+		log.Fatal(err)
 		return err
 	}
 
@@ -96,10 +97,10 @@ func Update(id string, transaction models.Transaction, db *sql.DB) error {
 }
 
 func Delete(id string, db *sql.DB) error {
-
+	log.Println("Exec DELETE")
 	_, err := db.Exec(`DELETE FROM transactions WHERE id=$1`, id)
 	if err != nil {
-		fmt.Println("Exec DELETE")
+		log.Fatal(err)
 		return err
 	}
 
@@ -107,9 +108,10 @@ func Delete(id string, db *sql.DB) error {
 }
 
 func List(db *sql.DB) []models.Transaction {
-
+	log.Println("Exec LIST")
 	rows, err := db.Query(`SELECT * FROM transactions`)
 	if err != nil {
+		log.Fatal(err)
 		return nil
 	}
 	defer rows.Close()
@@ -119,7 +121,7 @@ func List(db *sql.DB) []models.Transaction {
 	for rows.Next() {
 		var result models.Transaction
 		if err := rows.Scan(&result.ID, &result.UserID, &result.Amount, &result.Currency, &result.Type, &result.Category, &result.Date, &result.Description); err != nil {
-			fmt.Println(err)
+			log.Fatal(err)
 			return nil
 		}
 		fmt.Println(result.ID)
