@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/vanokl/trxservice/services/transactions/models"
 	"github.com/vanokl/trxservice/services/transactions/repo"
@@ -55,18 +56,63 @@ func Transaction(db *sql.DB) http.HandlerFunc {
 
 		case "GET":
 			id := r.PathValue("id")
-			if id != "" {
+			currency := r.URL.Query().Get("currency")
+			if currency != "" {
 				transaction := repo.Read(id, db)
 
-				if transaction != nil {
-					json.NewEncoder(w).Encode(models.TransactionResponse{Transaction: *transaction, Ok: true})
-				} else {
-					http.NotFound(w, r)
+				url := fmt.Sprintf("http://localhost:8080/convert?amount=%f&from=%s&to=%s", transaction.Amount, transaction.Currency, currency)
+				fmt.Println(url)
+				req, err := http.NewRequest("GET", url, nil)
+				if err != nil {
+					return
 				}
+
+				req.Header.Set("Content-Type", "application/json")
+
+				client := &http.Client{}
+				resp, err := client.Do(req)
+				if err != nil {
+					return
+				}
+				defer resp.Body.Close()
+
+				var converted models.CurrencyAnswer
+				if err := json.NewDecoder(resp.Body).Decode(&converted); err != nil {
+					fmt.Println(resp.Body)
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+
+				converted_transaction := models.TransactionConverted{
+					ID:                transaction.ID,
+					UserID:            transaction.UserID,
+					Amount:            transaction.Amount,
+					Currency:          transaction.Currency,
+					ConvertedAmount:   converted.ConvertedAmount,
+					ConvertedCurrency: converted.To,
+					Type:              transaction.Type,
+					Category:          transaction.Category,
+					Date:              transaction.Date,
+					Description:       transaction.Description,
+				}
+
+				json.NewEncoder(w).Encode(converted_transaction)
+
 			} else {
-				transactions := repo.List(db)
-				json.NewEncoder(w).Encode(models.ListResponse{Transaction: transactions, Ok: true})
+				if id != "" {
+					transaction := repo.Read(id, db)
+
+					if transaction != nil {
+						json.NewEncoder(w).Encode(models.TransactionResponse{Transaction: *transaction, Ok: true})
+					} else {
+						http.NotFound(w, r)
+					}
+				} else {
+					transactions := repo.List(db)
+					json.NewEncoder(w).Encode(models.ListResponse{Transaction: transactions, Ok: true})
+				}
 			}
+
 		case "UPDATE":
 			id := r.PathValue("id")
 			var transaction models.Transaction
@@ -123,6 +169,65 @@ func CommissionHandler() http.HandlerFunc {
 
 			json.NewEncoder(w).Encode(commission)
 
+		}
+	}
+}
+
+func CurrencyHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			from := r.URL.Query().Get("from")
+			to := r.URL.Query().Get("to")
+			amount, err := strconv.ParseFloat(r.URL.Query().Get("amount"), 64)
+			if err != nil {
+				fmt.Println("Error:", err)
+			}
+			url := fmt.Sprintf("https://api.freecurrencyapi.com/v1/latest?base_currency=%s&currencies=RUB,USD,EUR&apikey=fca_live_g25GMMWQ9VcXztgooX3yIietVivVGVJgmRDGcTMp", from)
+
+			req, err := http.NewRequest("GET", url, nil)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			req.Header.Set("Content-Type", "application/json")
+
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			defer resp.Body.Close()
+
+			var currency models.CurrencyStruct
+			if err := json.NewDecoder(resp.Body).Decode(&currency); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			var rate float64
+			switch to {
+			case "USD":
+
+				rate = currency.DataCurrency.USD
+			case "EUR":
+				rate = currency.DataCurrency.EUR
+			case "RUB":
+				rate = currency.DataCurrency.RUB
+
+			}
+
+			answer := models.CurrencyAnswer{
+				From:            from,
+				To:              to,
+				OriginalAmount:  amount,
+				ConvertedAmount: amount * rate,
+				Rate:            rate,
+			}
+
+			json.NewEncoder(w).Encode(answer)
 		}
 	}
 }
